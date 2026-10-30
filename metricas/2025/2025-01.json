@@ -1,0 +1,14 @@
+{
+    "anio": 2025,
+    "mes": 1,
+    "periodo_inicio": "2025-01-10",
+    "periodo_fin": "2025-02-09",
+    "fecha_generacion": "2026-10-30T19:24:47",
+    "grupos": [],
+    "totales": {
+        "inc": 0,
+        "warning": 0,
+        "req": 0,
+        "general": 0
+    }
+}

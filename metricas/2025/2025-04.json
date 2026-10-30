@@ -1,0 +1,50 @@
+{
+    "anio": 2025,
+    "mes": 4,
+    "periodo_inicio": "2025-04-10",
+    "periodo_fin": "2025-05-09",
+    "fecha_generacion": "2026-10-30T19:24:47",
+    "grupos": [
+        {
+            "grupo": "Middleware",
+            "inc": 21,
+            "warning": 0,
+            "req": 92,
+            "total": 113
+        },
+        {
+            "grupo": "Administración Nube",
+            "inc": 2,
+            "warning": 0,
+            "req": 46,
+            "total": 48
+        },
+        {
+            "grupo": "Administración SO, Servidores y Dominios",
+            "inc": 20,
+            "warning": 0,
+            "req": 48,
+            "total": 68
+        },
+        {
+            "grupo": "Monitoreo y Respaldo",
+            "inc": 11,
+            "warning": 2,
+            "req": 162,
+            "total": 175
+        },
+        {
+            "grupo": "Sin grupo",
+            "inc": 6,
+            "warning": 0,
+            "req": 83,
+            "total": 89
+        }
+    ],
+    "totales": {
+        "inc": 60,
+        "warning": 2,
+        "req": 431,
+        "general": 493
+    }
+}

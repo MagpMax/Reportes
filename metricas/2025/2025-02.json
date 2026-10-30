@@ -1,0 +1,22 @@
+{
+    "anio": 2025,
+    "mes": 2,
+    "periodo_inicio": "2025-02-10",
+    "periodo_fin": "2025-03-09",
+    "fecha_generacion": "2026-10-30T19:24:47",
+    "grupos": [
+        {
+            "grupo": "Middleware",
+            "inc": 0,
+            "warning": 0,
+            "req": 11,
+            "total": 11
+        }
+    ],
+    "totales": {
+        "inc": 0,
+        "warning": 0,
+        "req": 11,
+        "general": 11
+    }
+}

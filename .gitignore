@@ -5,10 +5,6 @@ Bitacora*.xlsx
 *.xlsm
 *.csv
 
-# Métricas locales generadas
-metricas/
-!metricas/.gitkeep
-
 # Entorno virtual
 .venv/
 venv/
