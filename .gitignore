@@ -1,0 +1,46 @@
+# Bitácoras y datos operacionales (NO subir a GitHub)
+Bitacora.xlsx
+Bitacora*.xlsx
+*.xls
+*.xlsm
+*.csv
+
+# Métricas locales generadas
+metricas/
+!metricas/.gitkeep
+
+# Entorno virtual
+.venv/
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Configuración local de IDE
+.vscode/
+.idea/
+
+# Logs y temporales
+*.log
+logs/
+tmp/
+temp/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini

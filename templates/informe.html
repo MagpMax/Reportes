@@ -1,0 +1,433 @@
+<!doctype html>
+
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Informe semanal acumulativo | ABENIS – IPS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilo.css') }}">
+</head>
+<body>
+<div class="contenedor"><section class="reporte">
+
+ <div class="wrap">
+ <header class="header">
+<div class="logos">
+
+<span class="brand">
+
+<img src="{{ url_for('static', filename='img/abenis.jpg') }}"
+
+ class="logo" alt="ABENIS">
+
+</span>
+
+ <span class="client">
+
+<img src="{{ url_for('static', filename='img/ips.jpg') }}"
+
+ class="logo" alt="IPS Chile Atiende">
+
+</span>
+
+ </div>
+
+ <div class="fecha-emision"><label>Fecha de emisión</label><input id="emision" type="date" readonly ></div>
+
+ <div class="eyebrow">Informe de actividades · Seguimiento acumulativo</div>
+
+ <h1>Administración, gestión, configuración, respaldos y mantención de plataformas tecnológicas IPS</h1>
+
+ <p class="subtitle">
+
+ Informe semanal acumulativo preparado a partir de la bitácora de actividades.
+
+</p>
+
+<!-- Mantén aquí el resto de los campos del informe -->
+
+<div class="meta">
+
+ <div class="campo selector-equipos">
+
+ <label>Equipo de trabajo</label>
+
+ <div class="opciones-equipos">
+
+<label class="opcion-equipo">
+
+ <input
+
+type="radio"
+ name="proceso"
+
+ id="procesoInfraestructura"
+
+ value="infraestructura"
+
+ checked
+
+>
+
+ <span>Equipo Infraestructura</span>
+
+ </label>
+
+ <label class="opcion-equipo">
+
+ <input
+
+ type="radio"
+
+ name="proceso"
+
+ id="procesoNOC"
+
+ value="monitoreo"
+
+>
+
+<span>Equipo NOC</span>
+
+</label>
+
+</div>
+
+ </div>
+
+ <div>
+
+ <label for="inicio">Inicio del período</label>
+
+ <input id="inicio" type="date">
+
+ </div>
+
+ <div>
+
+<label for="fin">Fin del período informado</label>
+
+<input id="fin" type="date">
+
+ </div>
+
+<div>
+
+<label for="hito">Hito / período</label>
+
+ <input id="hito" type="text" value="Hito 5 · Octubre 2026">
+
+ </div>
+
+ <div>
+
+</div>
+
+<button type="button" id="btnGenerar">
+
+Generar Informe
+
+</button>
+
+</div>
+
+</header>
+
+<div class="notice">Base inicial cargada desde <b>Bitacora.xlsx</b> para el período 12–22 de octubre de 2026. La bitácora contiene registros con campos vacíos y estados/tiempos no uniformes; por eso las métricas se calculan sobre los registros encontrados y no equivalen por sí solas a cumplimiento de SLA.</div>
+
+<section class="section"><h2>01 · Resumen ejecutivo</h2><div class="cards"><div class="metric"><div class="n" id="mTotal">—</div><div class="l">Actividades registradas</div></div><div class="metric"><div class="n" id="mProf">—</div><div class="l">Profesionales identificados</div></div><div class="metric"><div class="n" id="mDone">—</div><div class="l">Registros finalizados</div></div><div class="metric"><div class="n" id="mOpen">—</div><div class="l">Pendientes / en proceso / sin estado</div></div></div><div id="summaryText" style="margin-top:14px" contenteditable="true">Completar al cierre de cada semana: principales avances, continuidad operacional, trabajos relevantes, riesgos, incidentes significativos y acciones pendientes.</div></section>
+
+<section class="section"><h2>02 · Distribución por tipo de registro</h2><div id="typeSummary" class="cards"></div><p class="small">Clasificación tomada del campo “INC / REQ / WARNING” de la bitácora. Se mantienen otros valores si aparecen en la fuente.</p></section>
+
+<section class="section"><h2>03 · Seguimiento semanal</h2><div id="weekSummary"></div></section>
+
+<section class="section"><h2>04 · Actividades detalladas</h2>
+
+<div class="small" id="shown"></div><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Profesional</th><th>Tipo</th><th>Actividad</th><th>Detalle / resultado</th><th>Estado</th><th>Tiempo</th><th>Solicitante / área</th></tr></thead><tbody id="tbody"></tbody></table></div></section>
+
+<section class="section"><h2>05 · Hitos, alertas y pendientes del período</h2><div contenteditable="true"><p><b>Hitos destacados:</b> completar con resultados verificables de mayor impacto operacional o de negocio.</p><p><b>Incidentes y alertas relevantes:</b> identificar causa, impacto, acciones ejecutadas, escalamiento y estado de resolución, cuando conste en la bitácora.</p><p><b>Pendientes y riesgos:</b> indicar responsable, próxima acción y fecha comprometida. No incorporar compromisos no confirmados.</p><p><b>Plan de la semana siguiente:</b> registrar actividades planificadas y dependencias.</p></div></section>
+
+<section class="section"><h2>06 · Control de consolidación mensual</h2><div contenteditable="true"><p>Al cierre de mes: actualizar fecha final; incorporar todos los registros semanales; revisar duplicados y estados; validar las cifras con la bitácora; redactar conclusiones ejecutivas; revisar pendientes y alertas; y emitir el PDF final.</p></div></section>
+
+<footer class="foot">ABENIS Consultores · Informe de actividades del servicio IPS · Documento de trabajo acumulativo</footer></div>
+
+<script>
+"use strict";
+
+let DATA = [];
+
+function esc(valor) {
+    return String(valor ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[c]);
+}
+
+function elemento(id, obligatorio = true) {
+    const el = document.getElementById(id);
+    if (!el && obligatorio) {
+        throw new Error(`Falta el elemento HTML id="${id}". Verifica que estés usando el informe.html actualizado.`);
+    }
+    return el;
+}
+
+function valor(id, predeterminado = "") {
+    return elemento(id).value ?? predeterminado;
+}
+
+function procesoActual() {
+    return document.querySelector('input[name="proceso"]:checked')?.value || "infraestructura";
+}
+
+async function respuestaJSON(respuesta) {
+    let datos;
+    try {
+        datos = await respuesta.json();
+    } catch {
+        throw new Error(`El servidor respondió con un formato inesperado (HTTP ${respuesta.status}).`);
+    }
+    if (!respuesta.ok) {
+        throw new Error(datos.error || `Error del servidor (HTTP ${respuesta.status}).`);
+    }
+    return datos;
+}
+
+
+
+async function cargarRegistrosSeleccionados() {
+
+    const proceso = document.querySelector(
+        'input[name="proceso"]:checked'
+    ).value;
+
+    const inicio = document.getElementById("inicio").value;
+    const fin = document.getElementById("fin").value;
+
+    const parametros = new URLSearchParams({
+        proceso: proceso,
+        inicio: inicio,
+        fin: fin
+    });
+
+    const respuesta = await fetch(`/api/load?${parametros}`);
+
+    // Leer la respuesta HTTP una sola vez.
+    const resultado = await respuestaJSON(respuesta);
+
+    if (resultado.ok === false) {
+        throw new Error(
+            resultado.error || "No se pudieron cargar los registros."
+        );
+    }
+
+    DATA = Array.isArray(resultado.registros)
+        ? resultado.registros
+        : [];
+
+    renderTable();
+}
+
+
+
+async function generarInforme() {
+    const boton = elemento("btnGenerar", false);
+
+    try {
+        if (boton) {
+            boton.disabled = true;
+            boton.textContent = "Procesando...";
+        }
+
+        const parametros = {
+            proceso: procesoActual(),
+            hito: valor("hito"),
+            inicio: valor("inicio"),
+            fin: valor("fin"),
+            emision: valor("emision")
+        };
+
+        if (!parametros.inicio || !parametros.fin) {
+            throw new Error("Debes indicar la fecha de inicio y fin del período.");
+        }
+        if (parametros.inicio > parametros.fin) {
+            throw new Error("La fecha de inicio no puede ser posterior a la fecha de fin.");
+        }
+
+        const respuesta = await fetch("/api/generar-informe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(parametros)
+        });
+        const informe = await respuestaJSON(respuesta);
+
+        if (informe.ok === false) {
+            throw new Error(informe.error || "No se pudo generar el informe.");
+        }
+
+        const ponerTexto = (id, contenido) => {
+            const el = elemento(id, false);
+            if (el) el.textContent = contenido ?? 0;
+        };
+
+        ponerTexto("mTotal", informe.total);
+        ponerTexto("mProf", informe.profesionales);
+        ponerTexto("mDone", informe.finalizados);
+        ponerTexto("mOpen", informe.pendientes);
+
+        const typeSummary = elemento("typeSummary", false);
+        if (typeSummary) {
+            typeSummary.innerHTML = Object.entries(informe.tipos || {}).map(([tipo, cantidad]) => `
+                <div class="metric">
+                    <div class="n">${esc(cantidad)}</div>
+                    <div class="l">${esc(tipo)}</div>
+                </div>
+            `).join("") || '<p class="small">No hay registros por tipo para este período.</p>';
+        }
+
+        const weekSummary = elemento("weekSummary", false);
+        if (weekSummary) {
+            weekSummary.innerHTML = (informe.semanas || []).map(semana => `
+                <div class="week-block">
+                    <h3>${esc(semana.semana || "Semana")}</h3>
+                    <p><b>${esc(semana.total ?? 0)}</b> registros · ${esc(semana.profesionales ?? 0)} profesionales</p>
+                </div>
+            `).join("") || '<p class="small">No hay actividad para el período seleccionado.</p>';
+        }
+
+        DATA = Array.isArray(informe.actividades) ? informe.actividades : [];
+        renderTable();
+
+
+    } catch (error) {
+        console.error("Error al generar el informe:", error);
+        alert("Error al generar el informe: " + error.message);
+    } finally {
+        if (boton) {
+            boton.disabled = false;
+            boton.textContent = "Generar Informe";
+        }
+    }
+}
+
+function renderTable() {
+    const cuerpo = elemento("tbody", false);
+    if (!cuerpo) {
+        console.error('No se encontró <tbody id="tbody">. La tabla de actividades no se actualizará.');
+        return;
+    }
+
+    const busquedaEl = elemento("q", false);
+    const semanaEl = elemento("weekFilter", false);
+    const tipoEl = elemento("typeFilter", false);
+    const estadoEl = elemento("statusFilter", false);
+
+    const busqueda = (busquedaEl?.value || "").toLowerCase().trim();
+    const semana = semanaEl?.value || "";
+    const tipo = tipoEl?.value || "";
+    const estado = estadoEl?.value || "";
+
+    const filas = DATA.filter(r => {
+        const texto = [
+            r.fecha, r.profesional_nombre || r.profesional, r.tipo,
+            r.actividad, r.detalle, r.estado, r.solicitante, r.area
+        ].join(" ").toLowerCase();
+
+        return (!busqueda || texto.includes(busqueda))
+            && (!semana || r.semana === semana)
+            && (!tipo || r.tipo === tipo)
+            && (!estado || r.estado === estado);
+    });
+
+    const shown = elemento("shown", false);
+    if (shown) shown.textContent = `Mostrando ${filas.length} de ${DATA.length} registros.`;
+
+    cuerpo.innerHTML = filas.map(r => `
+        <tr>
+            <td>${esc(r.fecha)}</td>
+            <td>${esc(r.profesional_nombre || r.profesional)}</td>
+            <td>${esc(r.tipo || "Sin tipo")}</td>
+            <td>${esc(r.actividad)}</td>
+            <td>${esc(r.detalle)}</td>
+            <td>${esc(r.estado || "Sin estado")}</td>
+            <td>${esc(r.tiempo)}</td>
+            <td>${esc([r.solicitante, r.area].filter(Boolean).join(" · "))}</td>
+        </tr>
+    `).join("") || '<tr><td colspan="8" class="small">No hay registros que coincidan con los filtros.</td></tr>';
+}
+
+["q", "weekFilter", "typeFilter", "statusFilter"].forEach(id => {
+    const el = elemento(id, false);
+    if (el) el.addEventListener(id === "q" ? "input" : "change", renderTable);
+});
+
+const botonGenerar = elemento("btnGenerar", false);
+if (botonGenerar) {
+    botonGenerar.addEventListener("click", () => generarInforme(true));
+}
+
+document.querySelectorAll('input[name="proceso"]').forEach(radio => {
+    radio.addEventListener("change", async () => {
+        try {
+            await cargarRegistrosSeleccionados();
+            await generarInforme(false);
+        } catch (error) {
+            console.error(error);
+            alert("Error al cambiar de equipo: " + error.message);
+        }
+    });
+});
+
+function configurarPeriodoInicial() {
+    const hoy = new Date();
+    hoy.setHours(12, 0, 0, 0);
+
+    const diaSemana = (hoy.getDay() + 6) % 7;
+    const lunesActual = new Date(hoy);
+    lunesActual.setDate(hoy.getDate() - diaSemana);
+
+    const inicio = new Date(lunesActual);
+    inicio.setDate(lunesActual.getDate() - 7);
+    const fin = new Date(inicio);
+    fin.setDate(inicio.getDate() + 4);
+
+    const formatoFecha = fecha => {
+        const anio = fecha.getFullYear();
+        const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+        const dia = String(fecha.getDate()).padStart(2, "0");
+        return `${anio}-${mes}-${dia}`;
+    };
+
+    const inicioEl = elemento("inicio", false);
+    const finEl = elemento("fin", false);
+    const emisionEl = elemento("emision", false);
+    const hitoEl = elemento("hito", false);
+
+    if (inicioEl && !inicioEl.value) inicioEl.value = formatoFecha(inicio);
+    if (finEl && !finEl.value) finEl.value = formatoFecha(fin);
+    if (emisionEl) emisionEl.value = formatoFecha(hoy);
+
+    if (hitoEl && !hitoEl.value) {
+        const primerDiaMes = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+        const desplazamiento = (primerDiaMes.getDay() + 6) % 7;
+        const semanaMes = Math.ceil((inicio.getDate() + desplazamiento) / 7);
+        hitoEl.value = `Hito - semana ${semanaMes}`;
+    }
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+    try {
+        configurarPeriodoInicial();
+        await cargarRegistrosSeleccionados();
+        await generarInforme(false);
+    } catch (error) {
+        console.error("Error al cargar el informe:", error);
+        alert("Error al cargar el informe: " + error.message);
+    }
+});
+</script>
+
+</section></div>
+</body>
+
+</html>
+
