@@ -745,10 +745,10 @@ def generar_metricas_mensuales_api():
         anio = int(datos.get("anio", 2026))
         mes = int(datos.get("mes", 1))
 
-        if anio < 2026 or mes < 1 or mes > 12:
+        if anio < 2025 or anio > 2027 or mes < 1 or mes > 12:
             return jsonify({
                 "ok": False,
-                "error": "Indique un año desde 2026 y un mes entre 1 y 12."
+                "error": "Indique un año entre 2025 y 2027 y un mes entre 1 y 12."
             }), 400
 
         metricas = calcular_metricas_mensuales(anio, mes)
@@ -768,8 +768,11 @@ def generar_metricas_mensuales_api():
 
 @app.route("/api/metricas-mensuales/<int:anio>/<int:mes>", methods=["GET"])
 def consultar_metricas_mensuales_api(anio, mes):
-    if anio < 2026 or mes < 1 or mes > 12:
-        return jsonify({"ok": False, "error": "Año o mes no válido."}), 400
+    if anio < 2025 or anio > 2027 or mes < 1 or mes > 12:
+        return jsonify({
+            "ok": False,
+            "error": "Indique un año entre 2025 y 2027 y un mes entre 1 y 12."
+        }), 400
 
     datos = leer_metricas_guardadas(anio, mes)
     if datos is None:
