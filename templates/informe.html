@@ -12,6 +12,12 @@
 <div class="contenedor"><section class="reporte">
 
  <div class="wrap">
+ <nav class="nav-estadisticas" aria-label="Navegación principal">
+     <a class="btn-estadisticas" href="{{ url_for('estadisticas') }}">
+         <span aria-hidden="true">▥</span>
+         Ver estadísticas mensuales
+     </a>
+ </nav>
  <header class="header">
 <div class="logos">
 
@@ -150,6 +156,89 @@ Generar Informe
 
 <section class="section"><h2>06 · Control de consolidación mensual</h2><div contenteditable="true"><p>Al cierre de mes: actualizar fecha final; incorporar todos los registros semanales; revisar duplicados y estados; validar las cifras con la bitácora; redactar conclusiones ejecutivas; revisar pendientes y alertas; y emitir el PDF final.</p></div></section>
 
+
+<section class="section" id="metricasMensuales">
+    <h2>07 · Consolidado mensual de indicadores</h2>
+    <p class="small">
+        Consolidado por período del día 10 de cada mes al día 9 del mes siguiente.
+        Las métricas se guardan en archivos JSON locales, sin base de datos.
+    </p>
+
+    <div class="meta">
+        <div>
+            <label for="mesMensual">Mes de inicio del período</label>
+            <select id="mesMensual">
+                <option value="1">Enero</option>
+                <option value="2">Febrero</option>
+                <option value="3">Marzo</option>
+                <option value="4">Abril</option>
+                <option value="5">Mayo</option>
+                <option value="6">Junio</option>
+                <option value="7">Julio</option>
+                <option value="8">Agosto</option>
+                <option value="9">Septiembre</option>
+                <option value="10" selected>Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+            </select>
+        </div>
+        <div>
+            <label for="anioMensual">Año</label>
+            <input id="anioMensual" type="number" min="2026" value="2026">
+        </div>
+        <div style="display:flex;align-items:end;gap:8px;flex-wrap:wrap">
+            <button type="button" id="btnGenerarMensual">
+                Generar / Actualizar métricas
+            </button>
+            <button type="button" id="btnConsultarMensual">
+                Consultar guardadas
+            </button>
+        </div>
+    </div>
+
+    <p class="small" id="estadoMetricas" aria-live="polite">
+        Selecciona un período para generar o consultar sus métricas.
+    </p>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Grupo</th>
+                    <th>INC</th>
+                    <th>Warning</th>
+                    <th>REQ</th>
+                    <th>Total por equipo</th>
+                </tr>
+            </thead>
+            <tbody id="tablaMetricasMensuales">
+                <tr>
+                    <td colspan="5">Aún no se han consultado métricas.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="cards" style="margin-top:20px">
+        <div class="metric">
+            <div class="n" id="totalINC">0</div>
+            <div class="l">Total incidentes</div>
+        </div>
+        <div class="metric">
+            <div class="n" id="totalWarning">0</div>
+            <div class="l">Total Warning</div>
+        </div>
+        <div class="metric">
+            <div class="n" id="totalREQ">0</div>
+            <div class="l">Total requerimientos</div>
+        </div>
+        <div class="metric">
+            <div class="n" id="totalGeneral">0</div>
+            <div class="l">Total general</div>
+        </div>
+    </div>
+</section>
+
 <footer class="foot">ABENIS Consultores · Informe de actividades del servicio IPS · Documento de trabajo acumulativo</footer></div>
 
 <script>
@@ -192,10 +281,8 @@ async function respuestaJSON(respuesta) {
     return datos;
 }
 
-
-
 async function cargarRegistrosSeleccionados() {
-
+    
     const proceso = document.querySelector(
         'input[name="proceso"]:checked'
     ).value;
@@ -210,24 +297,20 @@ async function cargarRegistrosSeleccionados() {
     });
 
     const respuesta = await fetch(`/api/load?${parametros}`);
+    const datos = await respuesta.json();
 
-    // Leer la respuesta HTTP una sola vez.
+
+
+    
     const resultado = await respuestaJSON(respuesta);
 
     if (resultado.ok === false) {
-        throw new Error(
-            resultado.error || "No se pudieron cargar los registros."
-        );
+        throw new Error(resultado.error || "No se pudieron cargar los registros.");
     }
 
-    DATA = Array.isArray(resultado.registros)
-        ? resultado.registros
-        : [];
-
+    DATA = Array.isArray(resultado.registros) ? resultado.registros : [];
     renderTable();
 }
-
-
 
 async function generarInforme() {
     const boton = elemento("btnGenerar", false);
@@ -424,6 +507,116 @@ window.addEventListener("DOMContentLoaded", async () => {
         alert("Error al cargar el informe: " + error.message);
     }
 });
+
+// ============================================================
+// CONSOLIDADO MENSUAL: genera/actualiza o consulta archivos JSON
+// ============================================================
+
+function parametrosMensuales() {
+    const anio = Number(document.getElementById("anioMensual").value);
+    const mes = Number(document.getElementById("mesMensual").value);
+
+    if (!Number.isInteger(anio) || anio < 2026) {
+        throw new Error("El año debe ser 2026 o posterior.");
+    }
+    if (!Number.isInteger(mes) || mes < 1 || mes > 12) {
+        throw new Error("Selecciona un mes válido.");
+    }
+
+    return { anio, mes };
+}
+
+function mostrarMetricasMensuales(datos) {
+    const tabla = document.getElementById("tablaMetricasMensuales");
+
+    tabla.innerHTML = (datos.grupos || []).map(g => `
+        <tr>
+            <td>${esc(g.grupo)}</td>
+            <td>${esc(g.inc)}</td>
+            <td>${esc(g.warning)}</td>
+            <td>${esc(g.req)}</td>
+            <td><b>${esc(g.total)}</b></td>
+        </tr>
+    `).join("") || `
+        <tr><td colspan="5">No existen registros clasificados para este período.</td></tr>
+    `;
+
+    document.getElementById("totalINC").textContent =
+        datos.totales?.inc ?? 0;
+    document.getElementById("totalWarning").textContent =
+        datos.totales?.warning ?? 0;
+    document.getElementById("totalREQ").textContent =
+        datos.totales?.req ?? 0;
+    document.getElementById("totalGeneral").textContent =
+        datos.totales?.general ?? 0;
+
+    document.getElementById("estadoMetricas").textContent =
+        `Período: ${datos.periodo_inicio} al ${datos.periodo_fin} | ` +
+        `Generado: ${datos.fecha_generacion}`;
+}
+
+async function generarMetricasMensuales() {
+    const estado = document.getElementById("estadoMetricas");
+    const boton = document.getElementById("btnGenerarMensual");
+
+    try {
+        const parametros = parametrosMensuales();
+        boton.disabled = true;
+        estado.textContent = "Calculando desde Bitacora.xlsx y guardando archivo...";
+
+        const respuesta = await fetch("/api/metricas-mensuales/generar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(parametros)
+        });
+
+        const resultado = await respuestaJSON(respuesta);
+        if (resultado.ok === false) {
+            throw new Error(resultado.error || "No se pudieron generar las métricas.");
+        }
+
+        mostrarMetricasMensuales(resultado.metricas);
+        estado.textContent =
+            `Métricas guardadas en ${resultado.archivo}`;
+    } catch (error) {
+        console.error("Error generando métricas mensuales:", error);
+        estado.textContent = "Error: " + error.message;
+    } finally {
+        boton.disabled = false;
+    }
+}
+
+async function consultarMetricasMensuales() {
+    const estado = document.getElementById("estadoMetricas");
+
+    try {
+        const { anio, mes } = parametrosMensuales();
+        estado.textContent = "Consultando archivo JSON guardado...";
+
+        const respuesta = await fetch(
+            `/api/metricas-mensuales/${anio}/${mes}`
+        );
+        const resultado = await respuestaJSON(respuesta);
+
+        if (resultado.ok === false) {
+            throw new Error(resultado.error || "No existen métricas guardadas.");
+        }
+
+        mostrarMetricasMensuales(resultado.metricas);
+        estado.textContent = "Métricas recuperadas desde el archivo local.";
+    } catch (error) {
+        console.error("Error consultando métricas mensuales:", error);
+        estado.textContent = "Error: " + error.message;
+    }
+}
+
+document.getElementById("btnGenerarMensual")
+    ?.addEventListener("click", generarMetricasMensuales);
+
+document.getElementById("btnConsultarMensual")
+    ?.addEventListener("click", consultarMetricasMensuales);
+
+
 </script>
 
 </section></div>

@@ -1,5 +1,7 @@
 from logging import config
 from pathlib import Path
+from datetime import date, datetime
+import json
 import unicodedata
 
 import pandas as pd
@@ -9,6 +11,8 @@ app = Flask(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 BITACORA = BASE_DIR / "Bitacora.xlsx"
+if not BITACORA.exists() and (BASE_DIR / "Bitacora(2).xlsx").exists():
+    BITACORA = BASE_DIR / "Bitacora(2).xlsx"
 EXCEL_PATH = BITACORA  # Alias conservado por compatibilidad.
 
 
@@ -109,24 +113,14 @@ def preparar_configuracion(clave_proceso):
 # ============================================================
 
 def normalizar(texto):
-    """Normaliza nombres para comparar datos de Excel y configuración."""
+    """Normaliza textos eliminando tildes, espacios y signos de puntuación."""
     texto = str(texto or "").strip().lower()
     texto = unicodedata.normalize("NFD", texto)
-
     texto = "".join(
-        caracter
-        for caracter in texto
+        caracter for caracter in texto
         if unicodedata.category(caracter) != "Mn"
     )
-
-    # Elimina todos los espacios para unificar nombres concatenados.
-    return "".join(
-        caracter
-        for caracter in texto
-        if caracter.isalnum()
-    )
-
-
+    return "".join(caracter for caracter in texto if caracter.isalnum())
 
 def obtener_configuracion(proceso=None):
     """Valida el proceso y construye sus mapas de profesionales y equipos."""
@@ -172,44 +166,6 @@ def obtener_hojas_excel():
 
 
 
-def diagnosticar_bitacora():
-
-    print("\n========== DIAGNÓSTICO GENERAL ==========")
-    print("Archivo utilizado:", BITACORA.resolve())
-
-    excel = pd.ExcelFile(BITACORA, engine="openpyxl")
-
-    print("Hojas encontradas:", excel.sheet_names)
-
-    for hoja in excel.sheet_names:
-
-        df = pd.read_excel(
-            BITACORA,
-            sheet_name=hoja,
-            engine="openpyxl",
-            header=0
-        )
-
-        print(f"\n--- HOJA: {hoja} ---")
-        print("Columnas:", list(df.columns))
-
-        if "FECHA SOLICITUD" in df.columns:
-            fechas = pd.to_datetime(
-                df["FECHA SOLICITUD"],
-                errors="coerce",
-                dayfirst=True
-            )
-
-            filas = df[fechas.dt.strftime("%Y-%m-%d") == "2026-10-23"]
-
-            if not filas.empty:
-                print("REGISTROS DEL 23-10-2026:")
-                print(filas.to_string(index=False))
-
-    print("\n========== FIN DIAGNÓSTICO ==========\n")
-
-
-
 def enriquecer_registros(registros, config):
     """Filtra por profesional, agrega equipo y nombre visible, y ordena."""
 
@@ -227,15 +183,8 @@ def enriquecer_registros(registros, config):
     for registro_original in registros:
         registro = dict(registro_original)
 
-        profesional = str(
-            registro.get("profesional")
-            or registro.get("hoja_origen")
-            or ""
-        ).strip()
-
+        profesional = str(registro.get("profesional") or "").strip()
         clave_profesional = normalizar(profesional)
-
-        print(f"Procesando registro: {registro}")
 
 
         if not clave_profesional:
@@ -288,93 +237,58 @@ def enriquecer_registros(registros, config):
 # LECTURA DE BITÁCORA EXCEL
 # ============================================================
 def leer_bitacora(hoja="Todas", fecha_desde=None, fecha_hasta=None):
-
-    """Lee una hoja específica o consolida todas las hojas del Excel."""
+    """
+    Lee las hojas de profesionales. Omite hojas de resumen y filas sin actividad.
+    Los encabezados reales están en la primera fila de cada hoja de profesional.
+    """
     if not BITACORA.exists():
         raise FileNotFoundError(f"No existe el archivo: {BITACORA}")
 
     hojas_disponibles = obtener_hojas_excel()
     if hoja == "Todas":
-        hojas_a_leer = hojas_disponibles
+        hojas_a_leer = [
+            nombre for nombre in hojas_disponibles
+            if normalizar(nombre) != "calculo informes"
+        ]
     elif hoja in hojas_disponibles:
         hojas_a_leer = [hoja]
     else:
         raise ValueError(f"La hoja '{hoja}' no existe en el archivo Excel.")
 
-    
     alias = {
-        "fecha": [
-            "fecha solicitud",
-            "fecha",
-            "dia"
-        ],
-        "periodo": [
-            "periodo",
-            "periodo informe mensual"
-        ],
-        "profesional": [
-            "profesional",
-            "recurso",
-            "responsable"
-        ],
-        "tipo": [
-            "inc req warning",
-            "inc / req / warning",
-            "tipo",
-            "tipo registro"
-        ],
-        "actividad": [
-            "actividad",
-            "tarea",
-            "resumen"
-        ],
-        "detalle": [
-            "detalle observacion",
-            "detalle / observacion",
-            "descripcion",
-            "resultado"
-        ],
+        "fecha": ["fecha solicitud", "fecha", "dia"],
+        "periodo": ["periodo"],
+        "profesional": ["profesional", "recurso", "responsable"],
+        "tipo": ["inc req warning", "tipo", "tipo registro"],
+        "actividad": ["actividad", "tarea", "resumen"],
+        "detalle": ["detalle observacion", "descripcion", "resultado"],
         "estado": [
-            "estado",
             "estado en proceso pendiente finalizado",
-            "status"
+            "estado", "status"
         ],
-        "tiempo": [
-            "tiempo estimado actividad",
-            "tiempo",
-            "horas",
-            "duracion"
-        ],
+        "tiempo": ["tiempo estimado actividad", "tiempo", "horas", "duracion"],
         "solicitante": [
-            "solicitante",
-            "personal solicitante",
-            "area personal solicitante",
-            "area / personal solicitante"
+            "area personal solicitante", "solicitante", "personal solicitante"
         ],
-        "area": [
-            "area",
-            "servicio"
-        ]
     }
 
-
     registros = []
+
     for nombre_hoja in hojas_a_leer:
         df = pd.read_excel(
             BITACORA,
             sheet_name=nombre_hoja,
             engine="openpyxl",
+            header=0
         )
+
         if df.empty:
             continue
 
-        # Se normalizan encabezados, conservando la relación con la columna real.
         columnas_originales = list(df.columns)
         df.columns = [normalizar(c) for c in df.columns]
+
         columnas = {}
-
-
-
         for destino, alternativas in alias.items():
             alternativas_normalizadas = {normalizar(a) for a in alternativas}
             for columna in df.columns:
@@ -382,15 +296,13 @@ def leer_bitacora(hoja="Todas", fecha_desde=None, fecha_hasta=None):
                     columnas[destino] = columna
                     break
 
-   
-        # if "fecha" not in columnas:
-        #     app.logger.warning(
-        #         "Se omite la hoja '%s': no se encontró una columna de fecha. "
-        #         "Columnas disponibles: %s",
-        #         nombre_hoja,
-        #         columnas_originales,
-        #     )
-        #     continue
+        # Sin fecha o actividad no es una hoja de bitácora utilizable.
+        if "fecha" not in columnas or "actividad" not in columnas:
+            app.logger.warning(
+                "Se omite hoja '%s': no se identificaron fecha y actividad. Columnas: %s",
+                nombre_hoja, columnas_originales
+            )
+            continue
 
         resultado = pd.DataFrame(index=df.index)
         for destino in alias:
@@ -399,75 +311,52 @@ def leer_bitacora(hoja="Todas", fecha_desde=None, fecha_hasta=None):
             else:
                 resultado[destino] = ""
 
-
-        
         resultado["fecha"] = pd.to_datetime(
-            resultado["fecha"], errors="coerce", dayfirst=True
+            resultado["fecha"], errors="coerce"
         )
-
-        # Eliminar registros sin fecha válida.
         resultado = resultado.dropna(subset=["fecha"]).copy()
 
-        # Filtrar desde la fecha de inicio.
         if fecha_desde:
-            desde = pd.to_datetime(fecha_desde)
-            resultado = resultado[resultado["fecha"] >= desde].copy()
+            desde = pd.to_datetime(fecha_desde).normalize()
+            resultado = resultado[
+                resultado["fecha"].dt.normalize() >= desde
+            ].copy()
 
-        # Filtrar hasta la fecha de término, si se especifica.
         if fecha_hasta:
-            hasta = pd.to_datetime(fecha_hasta)
-            resultado = resultado[resultado["fecha"] <= hasta].copy()
+            hasta = pd.to_datetime(fecha_hasta).normalize()
+            resultado = resultado[
+                resultado["fecha"].dt.normalize() <= hasta
+            ].copy()
 
-        # Convertir las fechas al formato utilizado por el informe.
         resultado["fecha"] = resultado["fecha"].dt.strftime("%Y-%m-%d")
 
-
         for columna in alias:
-            if columna != "fecha":
-                resultado[columna] = (
-                    resultado[columna]
-                    .fillna("")
-                    .astype(str)
-                    .replace({"nan": "None", "NaT": ""})
-                )
-                resultado[columna] = resultado[columna].replace("None", "")
-
-
-        # Eliminar filas que no contienen una actividad real.
-        # Una fecha y un horario por sí solos no constituyen una actividad.
-
-        resultado["actividad"] = (
-            resultado["actividad"]
-            .fillna("")
-            .astype(str)
-            .str.strip()
-        )
-
-        antes = len(resultado)
-
-        resultado = resultado[
-            resultado["actividad"] != ""
-        ].copy()
-
-        descartados = antes - len(resultado)
-
-        if descartados:
-            print(
-                f"Hoja {nombre_hoja}: "
-                f"{descartados} registros descartados sin actividad."
+            if columna == "fecha":
+                continue
+            resultado[columna] = (
+                resultado[columna]
+                .fillna("")
+                .astype(str)
+                .replace({"nan": "", "NaT": ""})
+                .str.replace("\u00a0", " ", regex=False)
+                .str.strip()
             )
+
+        # El nombre de la hoja es un respaldo cuando PROFESIONAL está vacío.
+        resultado["profesional"] = resultado.apply(
+            lambda fila: fila["profesional"] or nombre_hoja,
+            axis=1
+        )
 
         resultado["hoja_origen"] = nombre_hoja
 
-        registros.extend(
-            resultado.to_dict(orient="records")
-        )
+        # Excluir filas que solo contienen fecha/horario y no una tarea.
+        resultado["actividad"] = resultado["actividad"].fillna("").astype(str).str.strip()
+        resultado = resultado[resultado["actividad"] != ""].copy()
 
+        registros.extend(resultado.to_dict(orient="records"))
 
-
-
-
-    
+    app.logger.info("Registros leídos después de filtros: %s", len(registros))
     return registros
 
 
@@ -493,9 +382,7 @@ def calcular_informe(registros, inicio, fin):
             continue
 
         fecha_registro = pd.to_datetime(
-            r["fecha"],
-            errors="coerce",
-            format="%Y-%m-%d"
+            r["fecha"], errors="coerce", format="%Y-%m-%d"
         )
 
         if pd.isna(fecha_registro):
@@ -545,6 +432,17 @@ def calcular_informe(registros, inicio, fin):
                 and normalizar(r.get("profesional", "")) != "n/a"
             }),
         })
+
+    print(f"x - calcular_informe - Resumen semanal: {len(resumen_semanal)} semanas.")
+    print(f"x - calcular_informe - Tipos de actividades: {tipos}")
+    print(f"x - calcular_informe - Finalizados: {finalizados}, Pendientes: {len(filas) - finalizados}")
+    print(f"x - calcular_informe - Total actividades: {len(filas)}, Total profesionales: {len(profesionales)}")
+    print(f"x - calcular_informe - Primeras 5 actividades: {filas[:5]}")
+    print(f"x - calcular_informe - Primeros 5 profesionales: {list(profesionales)[:5]}")
+    print(f"x - calcular_informe - Primeros 5 tipos: {list(tipos.items())[:5]}")
+    print(f"x - calcular_informe - Primeras 5 semanas: {resumen_semanal[:5]}")
+    print(f"x - calcular_informe - Primeros 5 registros: {filas[:5]}")
+    print(f"x - calcular_informe - Primeros 5 tipos: {list(tipos.items())[:5]}")
 
 
     return {
@@ -621,13 +519,21 @@ def generar_informe_api():
         emision = str(datos.get("emision", "")).strip()
 
 
+        print(f"1 - Generando informe para proceso: {config['PROCESO']}, desde {inicio} hasta {fin}, hito: {hito}, emisión: {emision}")
+
+
         registros = leer_bitacora(
             "Todas",
             fecha_desde=inicio,
             fecha_hasta=fin
         )
 
-      
+        for registro in registros:
+            registro["profesional"] = str(registro.get("profesional") or "").strip()
+            registro["equipo"] = str(registro.get("equipo") or "").strip()
+            print (registro["profesional"] )
+            print (registro["equipo"] )
+
 
 
         registros_listos = enriquecer_registros(registros, config)
@@ -677,6 +583,225 @@ def listar_hojas():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+
+# ============================================================
+# CONSOLIDADO MENSUAL PERSISTENTE (JSON, SIN BASE DE DATOS)
+# Período: día 10 de un mes al día 9 del mes siguiente.
+# ============================================================
+
+METRICAS_DIR = BASE_DIR / "metricas"
+
+GRUPOS_MENSUALES = {
+    "Administración Middleware": "Middleware",
+    "Administración Infraestructura Cloud": "Administración Nube",
+    "Administración de Servidores, Dominios, Sistemas Operativos":
+        "Administración SO, Servidores y Dominios",
+    "Monitoreo y Respaldos": "Monitoreo y Respaldo",
+}
+
+ORDEN_GRUPOS_MENSUALES = [
+    "Middleware",
+    "Administración Nube",
+    "Administración SO, Servidores y Dominios",
+    "Monitoreo y Respaldo",
+    "Sin grupo",
+]
+
+
+def obtener_periodo_mensual(anio, mes):
+    """Devuelve el período desde el día 10 hasta el día 9 del mes siguiente."""
+    inicio = date(anio, mes, 10)
+    if mes == 12:
+        fin = date(anio + 1, 1, 9)
+    else:
+        fin = date(anio, mes + 1, 9)
+    return inicio, fin
+
+
+def obtener_mapa_grupos_mensuales():
+    """Relaciona identificadores y nombres de profesionales con su grupo."""
+    mapa = {}
+    for configuracion in CONFIGURACIONES.values():
+        for equipo, profesionales in configuracion["EQUIPOS"].items():
+            grupo = GRUPOS_MENSUALES.get(equipo, equipo)
+            for profesional in profesionales:
+                mapa[normalizar(profesional)] = grupo
+    return mapa
+
+
+def calcular_metricas_mensuales(anio, mes):
+    inicio, fin = obtener_periodo_mensual(anio, mes)
+    registros = leer_bitacora(
+        "Todas",
+        fecha_desde=inicio.isoformat(),
+        fecha_hasta=fin.isoformat()
+    )
+
+    mapa_grupos = obtener_mapa_grupos_mensuales()
+    grupos = {}
+
+    for registro in registros:
+        actividad = str(registro.get("actividad") or "").strip()
+        if not actividad:
+            continue
+
+        profesional = str(
+            registro.get("profesional") or registro.get("hoja_origen") or ""
+        ).strip()
+
+        clave_profesional = normalizar(profesional)
+        # La hoja es la referencia principal: cada pestaña corresponde
+        # al profesional titular de esa bitácora.
+        grupo = (
+            mapa_grupos.get(normalizar(registro.get("hoja_origen", "")))
+            or mapa_grupos.get(clave_profesional)
+            or "Sin grupo"
+        )
+
+        tipo = normalizar(registro.get("tipo", ""))
+
+        if tipo.startswith("inc"):
+            categoria = "inc"
+        elif "warning" in tipo:
+            categoria = "warning"
+        elif tipo.startswith("req"):
+            categoria = "req"
+        elif tipo.startswith("tarea") or tipo.startswith("task"):
+            categoria = "tareas"
+        else:
+            continue
+
+        if grupo not in grupos:
+            grupos[grupo] = {
+                "grupo": grupo,
+                "inc": 0,
+                "warning": 0,
+                "req": 0,
+                "tareas": 0,
+                "total": 0
+            }
+
+        grupos[grupo][categoria] += 1
+        grupos[grupo]["total"] += 1
+
+    grupos_ordenados = [
+        grupos[nombre]
+        for nombre in ORDEN_GRUPOS_MENSUALES
+        if nombre in grupos
+    ]
+    # Incluir cualquier grupo adicional al final, sin perder sus registros.
+    grupos_ordenados.extend(
+        grupo for nombre, grupo in grupos.items()
+        if nombre not in ORDEN_GRUPOS_MENSUALES
+    )
+
+    totales = {
+        "inc": sum(g["inc"] for g in grupos_ordenados),
+        "warning": sum(g["warning"] for g in grupos_ordenados),
+        "req": sum(g["req"] for g in grupos_ordenados),
+        "tareas": sum(g["tareas"] for g in grupos_ordenados),
+        "general": sum(g["total"] for g in grupos_ordenados)
+    }
+
+    return {
+        "anio": anio,
+        "mes": mes,
+        "periodo_inicio": inicio.isoformat(),
+        "periodo_fin": fin.isoformat(),
+        "fecha_generacion": datetime.now().isoformat(timespec="seconds"),
+        "grupos": grupos_ordenados,
+        "totales": totales
+    }
+
+
+def ruta_archivo_metricas(anio, mes):
+    return METRICAS_DIR / str(anio) / f"{anio}-{mes:02d}.json"
+
+
+def guardar_metricas_mensuales(datos):
+    archivo = ruta_archivo_metricas(datos["anio"], datos["mes"])
+    archivo.parent.mkdir(parents=True, exist_ok=True)
+
+    # Escritura temporal para evitar dejar un JSON incompleto si se interrumpe.
+    temporal = archivo.with_suffix(".json.tmp")
+    with open(temporal, "w", encoding="utf-8") as salida:
+        json.dump(datos, salida, ensure_ascii=False, indent=4)
+    temporal.replace(archivo)
+    return archivo
+
+
+def leer_metricas_guardadas(anio, mes):
+    archivo = ruta_archivo_metricas(anio, mes)
+    if not archivo.exists():
+        return None
+    with open(archivo, "r", encoding="utf-8") as entrada:
+        return json.load(entrada)
+
+
+@app.route("/api/metricas-mensuales/generar", methods=["POST"])
+def generar_metricas_mensuales_api():
+    try:
+        datos = request.get_json(silent=True) or {}
+        anio = int(datos.get("anio", 2026))
+        mes = int(datos.get("mes", 1))
+
+        if anio < 2026 or mes < 1 or mes > 12:
+            return jsonify({
+                "ok": False,
+                "error": "Indique un año desde 2026 y un mes entre 1 y 12."
+            }), 400
+
+        metricas = calcular_metricas_mensuales(anio, mes)
+        archivo = guardar_metricas_mensuales(metricas)
+
+        return jsonify({
+            "ok": True,
+            "mensaje": "Métricas generadas y guardadas correctamente.",
+            "archivo": str(archivo.relative_to(BASE_DIR)),
+            "metricas": metricas
+        })
+
+    except Exception as exc:
+        app.logger.exception("Error generando métricas mensuales")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/metricas-mensuales/<int:anio>/<int:mes>", methods=["GET"])
+def consultar_metricas_mensuales_api(anio, mes):
+    if anio < 2026 or mes < 1 or mes > 12:
+        return jsonify({"ok": False, "error": "Año o mes no válido."}), 400
+
+    datos = leer_metricas_guardadas(anio, mes)
+    if datos is None:
+        return jsonify({
+            "ok": False,
+            "error": "No existen métricas guardadas para este período."
+        }), 404
+
+    return jsonify({"ok": True, "metricas": datos})
+
+
+@app.route("/api/metricas-mensuales", methods=["GET"])
+def listar_metricas_mensuales_api():
+    disponibles = []
+    if METRICAS_DIR.exists():
+        for archivo in sorted(METRICAS_DIR.glob("*/*.json")):
+            disponibles.append({
+                "anio": int(archivo.parent.name),
+                "mes": int(archivo.stem.split("-")[-1]),
+                "archivo": str(archivo.relative_to(BASE_DIR))
+            })
+    return jsonify({"ok": True, "periodos": disponibles})
+
+
+@app.get("/estadisticas")
+def estadisticas():
+    return render_template("estadisticas.html")
+
+
 if __name__ == "__main__":
     # debug=True solo para desarrollo local.
     app.run(debug=True)
+
+
+

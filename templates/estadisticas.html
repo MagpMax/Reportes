@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estadísticas mensuales | ABENIS</title>
+<style>
+:root{--bg:#f4f7fb;--panel:#fff;--text:#172033;--muted:#667085;--line:#e5eaf1;--blue:#2563eb;--red:#dc5b5b;--green:#15966b;--orange:#d98a19;--shadow:0 8px 24px rgba(20,35,60,.06)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",Arial,sans-serif}.page{max-width:1440px;margin:auto;padding:28px}.header{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:24px}.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--blue);text-transform:uppercase}h1{font-size:26px;margin:3px 0 2px}.subtitle{color:var(--muted);margin:0}.actions{display:flex;gap:10px;flex-wrap:wrap}button{border:0;border-radius:8px;padding:10px 15px;font-weight:650;cursor:pointer;background:var(--blue);color:#fff}button.secondary{background:#e9eef8;color:#26354d}button:disabled{opacity:.55;cursor:wait}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}.card{padding:17px 19px}.card .label{color:var(--muted);font-size:12px;font-weight:650}.card .value{font-size:30px;font-weight:750;line-height:1.25;margin-top:5px}.card .hint{font-size:11px;color:var(--muted);margin-top:4px}.panel{padding:20px;margin-bottom:18px}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}h2{font-size:16px;margin:0}.panel-note{font-size:12px;color:var(--muted);margin-top:3px}.legend{display:flex;gap:14px;flex-wrap:wrap}.legend label{display:flex;align-items:center;gap:6px;color:#475467;font-size:12px;cursor:pointer}.legend input{accent-color:var(--blue)}.dot{width:9px;height:9px;border-radius:50%;display:inline-block}.chart-wrap{position:relative;width:100%;height:360px}
+.chart-tooltip{
+  position:absolute;z-index:5;display:none;pointer-events:none;
+  min-width:125px;padding:9px 11px;background:#172033;color:#fff;
+  border-radius:8px;box-shadow:0 5px 18px rgba(0,0,0,.18);
+  font-size:12px;line-height:1.55;white-space:nowrap;
+}
+.chart-tooltip strong{display:block;font-size:12px;margin-bottom:3px}
+.chart-tooltip .tip-row{display:flex;align-items:center;gap:7px}
+.chart-tooltip .tip-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+canvas{width:100%;height:100%;display:block}.status{font-size:12px;color:var(--muted);margin-top:10px;min-height:18px}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:11px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th{color:#667085;font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#f8fafc}th:first-child,td:first-child{text-align:left}tbody tr:hover{background:#f8fafc}tfoot{font-weight:750;background:#f8fafc}.empty{text-align:center!important;color:var(--muted);padding:28px}
+@media(max-width:850px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.header{align-items:flex-start;flex-direction:column}.chart-wrap{height:300px}}@media(max-width:480px){.page{padding:15px}.cards{gap:9px}.card{padding:13px}.card .value{font-size:25px}.panel{padding:14px}.chart-wrap{height:260px}}
+</style></head>
+<body><main class="page">
+<header class="header"><div><div class="eyebrow">ABENIS · Gestión de servicios</div><h1>Estadísticas mensuales</h1><p class="subtitle">Evolución de incidentes, requerimientos, tareas y warnings · últimos 12 períodos</p></div><div class="actions"><button class="secondary" id="btnActualizar">Actualizar datos</button><button class="secondary" onclick="location.href='/'">Volver a informes</button></div></header>
+<section class="cards">
+<article class="card"><div class="label">Incidentes · 12 meses</div><div class="value" id="kpiInc">—</div><div class="hint">Total acumulado</div></article>
+<article class="card"><div class="label">Requerimientos · 12 meses</div><div class="value" id="kpiReq">—</div><div class="hint">Total acumulado</div></article>
+<article class="card"><div class="label">Tareas · 12 meses</div><div class="value" id="kpiTareas">—</div><div class="hint">Total acumulado</div></article>
+<article class="card"><div class="label">Warnings · 12 meses</div><div class="value" id="kpiWarning">—</div><div class="hint">Total acumulado</div></article>
+</section>
+<section class="panel"><div class="panel-head"><div><h2>Comportamiento mensual por tipo</h2><div class="panel-note">Cada punto representa un período del día 10 al día 9 del mes siguiente. Los períodos sin informe se muestran en cero.</div></div><div class="legend">
+<label><input type="checkbox" data-series="inc" checked><span class="dot" style="background:#dc5b5b"></span>Incidentes</label><label><input type="checkbox" data-series="req" checked><span class="dot" style="background:#2563eb"></span>REQ</label><label><input type="checkbox" data-series="tareas" checked><span class="dot" style="background:#15966b"></span>Tareas</label><label><input type="checkbox" data-series="warning" checked><span class="dot" style="background:#d98a19"></span>Warnings</label>
+</div></div><div class="chart-wrap" id="chartWrap">
+      <canvas id="chartMensual" aria-label="Gráfico de evolución mensual. Mueve el cursor sobre los puntos para ver sus valores." role="img"></canvas>
+      <div class="chart-tooltip" id="chartTooltip" role="status" aria-live="polite"></div>
+    </div><div class="status" id="estado">Cargando informes guardados...</div></section>
+<section class="panel"><div class="panel-head"><div><h2>Detalle de los últimos 12 períodos</h2><div class="panel-note">La tabla se actualiza al incorporar nuevos archivos JSON mensuales.</div></div></div><div class="table-wrap"><table><thead><tr><th>Período</th><th>Incidentes</th><th>REQ</th><th>Tareas</th><th>Warnings</th><th>Total</th><th>Estado</th></tr></thead><tbody id="tablaMeses"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody><tfoot id="pieTabla"></tfoot></table></div></section>
+</main>
+<script>
+const SERIES={inc:{label:"Incidentes",color:"#dc5b5b"},req:{label:"REQ",color:"#2563eb"},tareas:{label:"Tareas",color:"#15966b"},warning:{label:"Warnings",color:"#d98a19"}};let datosMeses=[];
+const numero=v=>Number(v||0),formato=v=>numero(v).toLocaleString("es-CL"),claveMes=(a,m)=>`${a}-${String(m).padStart(2,"0")}`;
+const nombreMes=(a,m)=>new Date(a,m-1,1).toLocaleDateString("es-CL",{month:"short",year:"2-digit"}).replace(".","");
+function ventanaUltimos12(){const hoy=new Date(),fin=new Date(hoy.getFullYear(),hoy.getMonth(),1),meses=[];for(let i=11;i>=0;i--){const d=new Date(fin.getFullYear(),fin.getMonth()-i,1);meses.push({anio:d.getFullYear(),mes:d.getMonth()+1,key:claveMes(d.getFullYear(),d.getMonth()+1)});}return meses;}
+function extraerTotales(metricas){const t=metricas.totales||{},g=metricas.grupos||[],sumar=c=>g.reduce((a,x)=>a+numero(x[c]),0);return{inc:numero(t.inc??sumar("inc")),req:numero(t.req??sumar("req")),tareas:numero(t.tareas??t.tarea??sumar("tareas")+sumar("tarea")),warning:numero(t.warning??sumar("warning")),total:numero(t.general??(numero(t.inc)+numero(t.req)+numero(t.tareas??t.tarea)+numero(t.warning)))}}
+async function cargarDatos(){const estado=document.getElementById("estado"),boton=document.getElementById("btnActualizar");boton.disabled=true;estado.textContent="Buscando informes mensuales guardados...";try{const resp=await fetch("/api/metricas-mensuales",{cache:"no-store"});if(!resp.ok)throw new Error(`No se pudo listar los informes (${resp.status}).`);const listado=await resp.json();if(listado.ok===false)throw new Error(listado.error||"Error al consultar períodos.");const disponibles=new Map((listado.periodos||[]).map(p=>[claveMes(p.anio,p.mes),p]));const ventana=ventanaUltimos12();datosMeses=await Promise.all(ventana.map(async p=>{if(!disponibles.has(p.key))return{...p,label:nombreMes(p.anio,p.mes),inc:0,req:0,tareas:0,warning:0,total:0,existe:false};const r=await fetch(`/api/metricas-mensuales/${p.anio}/${p.mes}`,{cache:"no-store"});if(!r.ok)return{...p,label:nombreMes(p.anio,p.mes),inc:0,req:0,tareas:0,warning:0,total:0,existe:false};const j=await r.json(),t=extraerTotales(j.metricas||{});return{...p,label:nombreMes(p.anio,p.mes),...t,existe:true};}));actualizarPantalla();estado.textContent=`${datosMeses.filter(x=>x.existe).length} de 12 períodos con informe guardado. Última consulta: ${new Date().toLocaleString("es-CL")}.`;}catch(e){estado.textContent="Error: "+e.message;document.getElementById("tablaMeses").innerHTML=`<tr><td colspan="7" class="empty">${e.message}</td></tr>`;}finally{boton.disabled=false;}}
+function actualizarPantalla(){const campos=["inc","req","tareas","warning"],sumas={};campos.forEach(c=>sumas[c]=datosMeses.reduce((s,m)=>s+numero(m[c]),0));document.getElementById("kpiInc").textContent=formato(sumas.inc);document.getElementById("kpiReq").textContent=formato(sumas.req);document.getElementById("kpiTareas").textContent=formato(sumas.tareas);document.getElementById("kpiWarning").textContent=formato(sumas.warning);document.getElementById("tablaMeses").innerHTML=datosMeses.map(m=>`<tr><td>${m.label}</td><td>${formato(m.inc)}</td><td>${formato(m.req)}</td><td>${formato(m.tareas)}</td><td>${formato(m.warning)}</td><td><b>${formato(m.total)}</b></td><td>${m.existe?"Informe guardado":"Sin informe"}</td></tr>`).join("");document.getElementById("pieTabla").innerHTML=`<tr><td>Total 12 meses</td><td>${formato(sumas.inc)}</td><td>${formato(sumas.req)}</td><td>${formato(sumas.tareas)}</td><td>${formato(sumas.warning)}</td><td>${formato(campos.reduce((s,c)=>s+sumas[c],0))}</td><td></td></tr>`;dibujarGrafico();}
+let geometriaGrafico = null;
+
+function dibujarGrafico(){
+  const canvas=document.getElementById("chartMensual");
+  const rect=canvas.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=Math.max(1,Math.round(rect.width*dpr));
+  canvas.height=Math.max(1,Math.round(rect.height*dpr));
+  const ctx=canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const w=rect.width,h=rect.height;
+  const pad={l:48,r:18,t:18,b:42};
+  const plotW=w-pad.l-pad.r,plotH=h-pad.t-pad.b;
+  const visibles=[...document.querySelectorAll("[data-series]:checked")].map(x=>x.dataset.series);
+  const maxDato=Math.max(1,...datosMeses.flatMap(m=>visibles.map(k=>numero(m[k]))));
+  const max=Math.ceil(maxDato/5)*5 || 1;
+  const x=i=>pad.l+(datosMeses.length<=1?plotW/2:i*plotW/(datosMeses.length-1));
+  const puntos={};
+  ctx.clearRect(0,0,w,h);
+  ctx.font="11px Segoe UI, Arial";
+  ctx.textAlign="right";ctx.textBaseline="middle";
+  for(let i=0;i<=4;i++){
+    const val=max*i/4,y=pad.t+plotH-(plotH*i/4);
+    ctx.strokeStyle="#e9edf3";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+    ctx.fillStyle="#667085";ctx.fillText(Math.round(val).toString(),pad.l-9,y);
+  }
+  datosMeses.forEach((m,i)=>{
+    ctx.fillStyle="#667085";ctx.textAlign="center";ctx.textBaseline="top";
+    ctx.fillText(m.label,x(i),pad.t+plotH+13);
+  });
+  visibles.forEach(key=>{
+    const serie=SERIES[key];
+    puntos[key]=datosMeses.map((m,i)=>({
+      x:x(i),
+      y:pad.t+plotH-(numero(m[key])/max)*plotH,
+      value:numero(m[key]),
+      month:m.label,
+      exists:m.existe
+    }));
+    ctx.strokeStyle=serie.color;ctx.fillStyle=serie.color;ctx.lineWidth=2.5;
+    ctx.beginPath();
+    puntos[key].forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});
+    ctx.stroke();
+    puntos[key].forEach(p=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,Math.PI*2);ctx.fill();
+    });
+  });
+  if(!visibles.length){
+    ctx.fillStyle="#667085";ctx.textAlign="center";
+    ctx.fillText("Selecciona al menos una categoría",w/2,h/2);
+  }
+  geometriaGrafico={pad,plotW,plotH,max,puntos,visibles,width:w,height:h};
+  ocultarTooltip();
+}
+
+function ocultarTooltip(){
+  const tooltip=document.getElementById("chartTooltip");
+  if(tooltip) tooltip.style.display="none";
+}
+
+function mostrarTooltip(event){
+  if(!geometriaGrafico) return;
+  const canvas=document.getElementById("chartMensual");
+  const tooltip=document.getElementById("chartTooltip");
+  const bounds=canvas.getBoundingClientRect();
+  const mx=event.clientX-bounds.left;
+  const my=event.clientY-bounds.top;
+  const g=geometriaGrafico;
+  let mejor=null,distanciaMin=Infinity;
+  for(const key of g.visibles){
+    for(let i=0;i<(g.puntos[key]||[]).length;i++){
+      const p=g.puntos[key][i];
+      const d=Math.hypot(mx-p.x,my-p.y);
+      if(d<distanciaMin){distanciaMin=d;mejor={key,p,index:i};}
+    }
+  }
+  if(!mejor || distanciaMin>18){ocultarTooltip();return;}
+
+  const mes=datosMeses[mejor.index];
+  const lineas=g.visibles.map(key=>{
+    const p=g.puntos[key][mejor.index];
+    return `<div class="tip-row"><span class="tip-dot" style="background:${SERIES[key].color}"></span>${SERIES[key].label}: <b>${formato(p.value)}</b></div>`;
+  }).join("");
+  tooltip.innerHTML=`<strong>${mes.label}</strong>${lineas}<div style="opacity:.75;margin-top:4px">${mes.existe?"Informe guardado":"Sin informe guardado"}</div>`;
+  tooltip.style.display="block";
+
+  const wrap=document.getElementById("chartWrap");
+  const maxLeft=wrap.clientWidth-tooltip.offsetWidth-8;
+  const maxTop=wrap.clientHeight-tooltip.offsetHeight-8;
+  tooltip.style.left=`${Math.max(8,Math.min(mx+14,maxLeft))}px`;
+  tooltip.style.top=`${Math.max(8,Math.min(my-12,maxTop))}px`;
+}
+
+const graficoCanvas=document.getElementById("chartMensual");
+graficoCanvas.addEventListener("mousemove",mostrarTooltip);
+graficoCanvas.addEventListener("mouseleave",ocultarTooltip);
+graficoCanvas.addEventListener("touchstart",ocultarTooltip,{passive:true});
+document.getElementById("btnActualizar").addEventListener("click",cargarDatos);document.querySelectorAll("[data-series]").forEach(e=>e.addEventListener("change",dibujarGrafico));window.addEventListener("resize",()=>{if(datosMeses.length)dibujarGrafico()});cargarDatos();
+</script></body></html>
