@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Reportes | </title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="header-content">
+            <div class="brand">
+                <div class="brand-logo">A</div>
+                <div class="brand-text">
+                    <h2>Nosotros? </h2>
+                    <span>acá?</span>
+                </div>
+            </div>
+
+            <div class="header-info">
+                Plataforma de Reportabilidad
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+
+        <section class="welcome">
+            <span class="eyebrow">PLATAFORMA DE GESTIÓN</span>
+            <h1>Centro de Reportes</h1>
+            <p>
+                Bienvenido. Selecciona el módulo al que deseas acceder.
+                Desde aquí podrás gestionar informes y consultar
+                estadísticas de operación.
+            </p>
+        </section>
+
+        <section class="modules">
+
+            <!-- MÓDULO 1 -->
+            <a href="{{ url_for('informe') }}"
+               class="module-card">
+
+                <div class="module-icon blue">
+                    <i class="symbol">▤</i>
+                </div>
+
+                <div class="module-content">
+                    <span class="module-number">MÓDULO 01</span>
+                    <h2>Informe de Gestión</h2>
+                    <p>
+                        Generación de informes periódicos,
+                        actividades realizadas y seguimiento
+                        de hitos de gestión.
+                    </p>
+                </div>
+
+                <div class="module-footer">
+                    <span>Ingresar al módulo</span>
+                    <span class="arrow">→</span>
+                </div>
+
+            </a>
+
+
+            <!-- MÓDULO 2 -->
+            <a href="{{ url_for('estadisticas') }}"
+               class="module-card">
+
+                <div class="module-icon green">
+                    <i class="symbol">▥</i>
+                </div>
+
+                <div class="module-content">
+                    <span class="module-number">MÓDULO 02</span>
+                    <h2>Estadísticas</h2>
+                    <p>
+                        Visualización de indicadores,
+                        métricas mensuales y análisis
+                        de resultados históricos.
+                    </p>
+                </div>
+
+                <div class="module-footer">
+                    <span>Ingresar al módulo</span>
+                    <span class="arrow">→</span>
+                </div>
+
+            </a>
+
+            <!--
+            PARA AGREGAR NUEVOS MÓDULOS:
+
+            Copiar una tarjeta y modificar:
+            1. La URL de destino.
+            2. El número del módulo.
+            3. El título.
+            4. La descripción.
+            -->
+
+        </section>
+
+        <footer class="footer">
+            <span>nuestro nombre?</span>
+            <span>Plataforma de Reportabilidad</span>
+        </footer>
+
+    </main>
+
+</body>
+</html>

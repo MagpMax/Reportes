@@ -457,10 +457,18 @@ def calcular_informe(registros, inicio, fin):
 
 
 # ============================================================
-# RUTAS WEB Y API
+# RUTAS PRINCIPALES DE NAVEGACIÓN
 # ============================================================
+
 @app.get("/")
-def load():
+def index():
+    """Página principal de acceso a los módulos."""
+    return render_template("index.html")
+
+
+@app.get("/informe")
+def informe():
+    """Módulo de generación de informes."""
     return render_template("informe.html")
 
 
@@ -800,6 +808,8 @@ def listar_metricas_mensuales_api():
 @app.get("/estadisticas")
 def estadisticas():
     return render_template("estadisticas.html")
+
+
 
 
 if __name__ == "__main__":

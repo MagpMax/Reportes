@@ -1,0 +1,225 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f3f6fa;
+    color: #263445;
+    min-height: 100vh;
+}
+
+/* HEADER */
+
+.header {
+    background: #142d48;
+    color: white;
+    padding: 18px 5%;
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo {
+    background: white;
+    color: #142d48;
+    font-weight: 800;
+    font-size: 25px;
+    width: 44px;
+    height: 44px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-text h2 {
+    font-size: 19px;
+    letter-spacing: 1px;
+}
+
+.brand-text span {
+    font-size: 10px;
+    color: #c2d0df;
+    letter-spacing: 2px;
+}
+
+.header-info {
+    font-size: 13px;
+    color: #d0dce8;
+}
+
+/* CONTENIDO */
+
+.main-container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 65px 25px 25px;
+}
+
+.welcome {
+    max-width: 700px;
+    margin-bottom: 40px;
+}
+
+.eyebrow {
+    color: #2581c5;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.welcome h1 {
+    font-size: 34px;
+    margin: 12px 0;
+    color: #192f49;
+}
+
+.welcome p {
+    color: #718096;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+/* TARJETAS */
+
+.modules {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 25px;
+}
+
+.module-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    padding: 28px;
+    min-height: 255px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.25s ease;
+}
+
+.module-card:hover {
+    transform: translateY(-5px);
+    border-color: #b8d4ed;
+    box-shadow: 0 12px 28px rgba(31, 55, 80, 0.10);
+}
+
+.module-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 22px;
+}
+
+.module-icon.blue {
+    background: #e7f2fc;
+    color: #2479ba;
+}
+
+.module-icon.green {
+    background: #e5f6ef;
+    color: #17966b;
+}
+
+.symbol {
+    font-size: 30px;
+    font-style: normal;
+    font-weight: bold;
+}
+
+.module-number {
+    font-size: 10px;
+    color: #8795a6;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.module-content h2 {
+    font-size: 20px;
+    color: #20364f;
+    margin: 8px 0;
+}
+
+.module-content p {
+    color: #788698;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.module-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 25px;
+    color: #287dbb;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.arrow {
+    font-size: 22px;
+    transition: transform 0.2s;
+}
+
+.module-card:hover .arrow {
+    transform: translateX(5px);
+}
+
+/* FOOTER */
+
+.footer {
+    border-top: 1px solid #dfe6ed;
+    margin-top: 70px;
+    padding: 22px 0;
+    display: flex;
+    justify-content: space-between;
+    color: #98a4b1;
+    font-size: 11px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 650px) {
+    .modules {
+        grid-template-columns: 1fr;
+    }
+
+    .main-container {
+        padding-top: 40px;
+    }
+
+    .welcome h1 {
+        font-size: 27px;
+    }
+
+    .header-info {
+        display: none;
+    }
+
+    .footer {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
